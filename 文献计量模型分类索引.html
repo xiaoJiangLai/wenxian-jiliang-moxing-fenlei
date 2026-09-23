@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文献计量模型分类索引</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --border:#e5e4df; --text:#222; --muted:#7a7a74;
+  --accent:#185FA5; --accent-bg:#E6F1FB;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.6;}
+header{background:var(--card); border-bottom:1px solid var(--border); padding:28px 40px;}
+header h1{font-size:22px; font-weight:600;}
+header p{color:var(--muted); font-size:14px; margin-top:6px;}
+.wrap{max-width:1180px; margin:0 auto; padding:28px 40px 60px;}
+.summary{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px;}
+.metric{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px;}
+.metric .num{font-size:26px; font-weight:600; color:var(--accent);}
+.metric .lbl{font-size:12px; color:var(--muted); margin-top:2px;}
+.filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;}
+.chip{border:1px solid var(--border); background:var(--card); border-radius:999px; padding:6px 16px; font-size:13px; cursor:pointer; color:#444; transition:all .15s;}
+.chip:hover{border-color:var(--accent); color:var(--accent);}
+.chip.on{background:var(--accent); color:#fff; border-color:var(--accent);}
+.chip .cnt{opacity:.65; font-size:11px; margin-left:4px;}
+.group{margin-bottom:32px;}
+.group-head{display:flex; align-items:baseline; gap:10px; margin-bottom:12px;}
+.group-head h2{font-size:17px; font-weight:600;}
+.group-head .tag{font-size:12px; color:var(--accent); background:var(--accent-bg); border-radius:6px; padding:2px 8px;}
+.group-head .desc{font-size:13px; color:var(--muted);}
+.papers{display:grid; grid-template-columns:1fr; gap:8px;}
+.paper{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 18px;}
+.paper .title{font-size:14px; font-weight:500; margin-bottom:4px;}
+.paper .meta{font-size:12px; color:var(--muted);}
+.paper .meta b{color:#555; font-weight:500;}
+.paper .badge{display:inline-block; font-size:11px; background:var(--accent-bg); color:var(--accent); border-radius:5px; padding:1px 7px; margin-right:4px; margin-bottom:2px;}
+.hidden{display:none;}
+.footer{color:var(--muted); font-size:12px; text-align:center; margin-top:20px;}
+.search-box{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:20px;}
+.search-box .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+.search-box input[type=text]{flex:1; min-width:220px; padding:9px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; font-family:inherit;}
+.search-box input[type=text]:focus{border-color:var(--accent);}
+.search-box button{border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:8px; padding:9px 16px; font-size:13px; cursor:pointer; font-family:inherit;}
+.search-box button.ghost{background:transparent; color:var(--accent);}
+.kw-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;}
+.kw{border:1px solid var(--border); background:#fbfbfa; border-radius:999px; padding:3px 12px; font-size:12px; cursor:pointer; color:#555; transition:all .12s;}
+.kw:hover{border-color:var(--accent); color:var(--accent);}
+.kw.on{background:var(--accent); color:#fff; border-color:var(--accent);}
+.result-bar{font-size:13px; color:var(--muted); margin-bottom:16px;}
+.result-bar b{color:var(--accent);}
+.result-flat .paper{border-left:3px solid var(--accent); margin-bottom:8px;}
+.result-flat .cat-tag{font-size:11px; color:var(--muted); margin-left:8px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>文献计量模型分类索引</h1>
+  <p>共 64 篇经济学文献 · 按核心计量模型归类，点击模型标签即可筛选对应文献</p>
+</header>
+<div class="wrap">
+  <div class="summary" id="summary"></div>
+
+  <div class="search-box">
+    <div class="row">
+      <input type="text" id="kwInput" placeholder="输入文章标题或作者名，如：断点 / 土地流转 / 孙伟增…">
+      <button id="btnClear">清空</button>
+      <button id="btnReset" class="ghost">重置</button>
+    </div>
+    <div class="kw-list" id="kwList"></div>
+  </div>
+
+  <div class="result-bar" id="resultBar"></div>
+
+  <div class="filters" id="filters"></div>
+  <div id="groups"></div>
+  <div class="footer">分类依据每篇文献的核心实证方法（一篇文献可归入多个大类）· 上方输入框可按文章标题/作者检索，并显示其所用计量模型</div>
+</div>
+
+<script>
+const DATA = [
+{cat:"断点回归 (RDD)", key:"rdd", desc:"利用外生门槛/断点识别因果效应，含精确与模糊断点、地理断点、空间断点", color:"#185FA5",
+ papers:[
+  {t:"上山下乡经历与家庭风险金融资产投资", a:"周广肃", m:"模糊断点回归、IV-Probit、IV-Tobit"},
+  {t:"乡村振兴视角下的农村劳动力回流弹性估计", a:"李芳华", m:"空间断点回归、局部多项式"},
+  {t:"住房保障制度、流动人口家庭消费与社会融入", a:"孙伟增", m:"模糊断点回归(公租房收入门槛)、2SLS"},
+  {t:"农村养老保险、代际支持与隔代抚育", a:"杨瑞龙", m:"模糊断点回归(60岁年龄断点)"},
+  {t:"区域一体化的减霾效应", a:"周沂", m:"地理断点回归、局部线性回归"},
+  {t:"大学扩招提升了社会公平感吗", a:"龚锋", m:"模糊断点回归(高考年份)、McCrary检验"},
+  {t:"晋升激励与工业用地出让价格", a:"田文佳", m:"地理边界断点回归、特征价格模型"},
+  {t:"空气污染与高管流动研究", a:"杨金玉", m:"断点回归(秦岭—淮河供暖分界线)、DEA-Tobit"},
+  {t:"绿色农业补贴政策的环境效应和经济效应", a:"左喆瑜", m:"模糊断点回归(50亩补贴门槛)、LATE"},
+  {t:"配偶退休会改变中老年人的健康行为吗", a:"赵广川", m:"断点回归(法定退休年龄)、IV"}
+ ]},
+{cat:"双重差分 (DID)", key:"did", desc:"政策冲击的准自然实验，含多期DID、渐进DID、PSM-DID、事件研究", color:"#0F6E56",
+ papers:[
+  {t:"政策赋能、数字生态与企业数字化转型", a:"孙伟增", m:"DID(大数据试验区)、PSM-DID、负二项回归"},
+  {t:"数字基础设施与代际收入向上流动性", a:"方福前", m:"DID(宽带中国)、2SLS、SUTVA检验"},
+  {t:"数字基础设施建设与城市高技能创业人才吸引", a:"焦豪", m:"渐进DID、事件研究、PSM-DID"},
+  {t:"数字基础设施建设对农产品市场分割的影响", a:"付阳奇", m:"渐进DID(宽带中国)"},
+  {t:"公共数据开放与中国绿色全要素生产率", a:"郭家堂", m:"交叠DID、Callaway-Sant'Anna、插补/堆叠估计"},
+  {t:"数据要素的赋能机制与企业全要素生产率提升", a:"史丹", m:"多期DID(大数据试验区)、LP/OP法、PSM-DID"},
+  {t:"政务政务服务一体化对资本流动的影响", a:"孙伟增", m:"渐进DID、事件研究、LPM"},
+  {t:"撤县设区对区域粮食生产的外溢效应分析", a:"李宁", m:"多期DID、工具变量法"},
+  {t:"撤县设市、产业基础与县域农业发展", a:"龚斌磊", m:"DID、事件研究、PSM-DID"},
+  {t:"教育准入、长期留城意愿与流动人口市民化", a:"张锦华", m:"DID(三重交互)、Logit、2SLS"},
+  {t:"环境分权视角下环保垂改政策的影响", a:"王瑶", m:"多期DID、PSM-DID、空间杜宾"},
+  {t:"矫正效应还是加剧效应——数字基础设施的影响", a:"张国胜", m:"DID(宽带中国)、PSM-DID、Logit"},
+  {t:"碳排放规制、企业减排激励与全要素生产率", a:"胡珺", m:"DID(碳排放权交易)、熵平衡、事件研究"},
+  {t:"绿色金融改革创新试验区效果评估", a:"赵亚雄", m:"DID、超效率DEA、Malmquist-Luenberger"},
+  {t:"绿色金融改革创新试验区的碳减排效应", a:"李慧", m:"DID、空间DID、合成控制法"},
+  {t:"链岛成陆：公共数据开放的技术创新效应", a:"沈坤荣", m:"多时点DID、事件研究、PSM"},
+  {t:"数字政府建设与企业融资约束", a:"王辉", m:"DID、熵权法、文本分析、固定效应"}
+ ]},
+{cat:"工具变量法 (IV/2SLS)", key:"iv", desc:"处理内生性的核心方法，含Bartik工具变量、历史工具变量、弱IV检验", color:"#993C1D",
+ papers:[
+  {t:"中国农机服务市场的转型机理及其政策选择", a:"仇童伟", m:"2SLS、DWH内生性检验、弱IV检验"},
+  {t:"农业投资与土地流转价格", a:"许庆", m:"双向固定效应、2SLS、弱IV检验"},
+  {t:"宗族文化与电商发展", a:"王剑程", m:"2SLS、IV-Probit、IV-Tobit"},
+  {t:"工业机器人应用与就业再配置", a:"毛日昇", m:"长差分、Bartik工具变量、2SLS"},
+  {t:"地方公共债务与企业全要素生产率", a:"吴敏", m:"双向固定效应、2SLS、OP/LP/ACF"},
+  {t:"地方政府债务与非农就业提升", a:"毛捷", m:"双向固定效应、2SLS、面板Logit"},
+  {t:"数字乡村对农业绿色全要素生产率的影响", a:"杜建军", m:"2SLS、中介效应、SBM-DEA"},
+  {t:"社会网络、技能提升与就业地选择", a:"孙晓华", m:"IV/2SLS、Probit、CFA"},
+  {t:"高标准农田建设的农地流转市场转型效应", a:"王术坤", m:"IV/2SLS、Logit、村庄固定效应"}
+ ]},
+{cat:"固定效应面板模型", key:"fe", desc:"面板数据的固定效应/双向固定效应，是实证研究的基础框架", color:"#534AB7",
+ papers:[
+  {t:"中国农村土地流转与农业生产模式变迁", a:"朱诗娥", m:"家户/村庄双向固定效应、PSM、DID"},
+  {t:"人口老龄化下农业人力资本对农业绿色TFP的影响", a:"杜建国", m:"双向固定效应、IV-2SLS、PSM"},
+  {t:"人工智能如何提升企业生产效率", a:"姚加权", m:"多维固定效应、机器学习文本、PSM-DID"},
+  {t:"产业规模偏好与企业全要素生产率", a:"王海成", m:"多维固定效应、ACF法、分时期DID"},
+  {t:"数字经济发展、资本跨区域非对称流动", a:"孙伟增", m:"多维固定效应(城市对)、2SLS"},
+  {t:"气候风险、经济增长与城市内涵式发展", a:"陈海山", m:"双向固定效应、事件研究、长差分"},
+  {t:"重庆南川村域耕地撂荒成因及分异机制", a:"王刚", m:"多元线性回归、VIF、自然断点法"}
+ ]},
+{cat:"空间计量", key:"spatial", desc:"空间自相关与空间溢出效应，含空间杜宾(SDM)、空间滞后、空间误差", color:"#7F77DD",
+ papers:[
+  {t:"数字经济赋能低碳发展", a:"韩晶", m:"空间杜宾模型(SDM)、Moran's I、多期DID"},
+  {t:"旅游业发展对共同富裕的影响及空间溢出", a:"王金伟", m:"空间杜宾模型(SPDM)、效应分解、LISA"},
+  {t:"经济结构调整、绿色技术进步与低碳转型", a:"邵帅", m:"空间杜宾模型(SDM)、DDF-DEA、QML"},
+  {t:"长株潭都市圈数字经济对碳排放效率的影响", a:"彭文斌", m:"空间杜宾模型(SDM)、SBM-DEA、GIS"},
+  {t:"中国数字经济与农业融合发展水平测度", a:"王定祥", m:"Dagum基尼、核密度、Moran's I"},
+  {t:"环境分权视角下环保垂改政策的影响", a:"王瑶", m:"多期DID、空间杜宾、PSM-DID"},
+  {t:"绿色金融改革创新试验区的碳减排效应", a:"李慧", m:"DID、空间DID、合成控制法"}
+ ]},
+{cat:"全要素生产率测度 (TFP/DEA)", key:"tfp", desc:"生产效率测算，含DEA、SBM、Malmquist指数、OP/LP/ACF、DDF方向距离函数", color:"#3B6D11",
+ papers:[
+  {t:"中国农业全要素生产率演进与要素错配", a:"吴亚玲", m:"TFP测度、Hsieh-Klenow错配、反事实"},
+  {t:"传统宗族文化提升现代农业生产效率", a:"丁从明", m:"DEA-Malmquist、2SLS、交互项"},
+  {t:"人与自然何以和谐共生", a:"邵帅", m:"混合网络DEA、固定效应、2SLS"},
+  {t:"人口老龄化下农业人力资本对农业绿色TFP", a:"杜建国", m:"超效率SBM、Malmquist、IV-2SLS"},
+  {t:"数字经济赋能低碳发展", a:"韩晶", m:"super-SBM+GML、熵权法、DDF"},
+  {t:"经济结构调整、绿色技术进步与低碳转型", a:"邵帅", m:"DDF-DEA、Luenberger、空间杜宾"},
+  {t:"绿色金融改革创新试验区效果评估", a:"赵亚雄", m:"超效率DEA、Malmquist-Luenberger、DID"}
+ ]},
+{cat:"一般均衡 / 理论模型", key:"ge", desc:"GE、DSGE、量化空间一般均衡、博弈论、内生增长理论等结构模型", color:"#5F5E5A",
+ papers:[
+  {t:"数据、生产与宏观经济", a:"李兆睿", m:"一般均衡(GE)、DSGE、数值模拟"},
+  {t:"数据要素、交通基础设施与产业结构升级", a:"陈晓佳", m:"量化空间一般均衡(QSM)、帽子代数"},
+  {t:"劳动力流动、技能匹配与地区经济差距", a:"刘晨晖", m:"中心—外围模型(CP)、数值模拟"},
+  {t:"数据驱动、精准创新与社会福利", a:"尹振东", m:"两阶段动态博弈、Hotelling模型"},
+  {t:"环境目标责任制、环境治理与内生经济增长", a:"严成樑", m:"内生增长模型(Romer型)、数值模拟"},
+  {t:"中国的绿色政策与就业：存在双重红利吗", a:"陆旸", m:"VAR模型、脉冲响应、投入产出法"}
+ ]},
+{cat:"综合指数测度 / 其他方法", key:"index", desc:"熵权法、AHP、主成分、PSR框架、文本分析、机器学习、基尼系数等", color:"#BA7517",
+ papers:[
+  {t:"中国数字经济与农业融合发展水平测度", a:"王定祥", m:"AHP+CRITIC、Dagum基尼、核密度"},
+  {t:"中国粮食安全系统转型的时空特征", a:"杨一单", m:"PSR框架、熵权法、系统GMM"},
+  {t:"人工智能如何提升企业生产效率", a:"姚加权", m:"Word2vec词典、文本分析、OP法"},
+  {t:"政策赋能、数字生态与企业数字化转型", a:"孙伟增", m:"文本分析(词频)、DID、负二项"},
+  {t:"数字政府建设与企业融资约束", a:"王辉", m:"熵权法、TF-IDF文本、固定效应"}
+ ]},
+{cat:"质性 / 纯理论 / 案例研究", key:"qual", desc:"无计量模型，以理论推演、政策文本、案例编码为主", color:"#888780",
+ papers:[
+  {t:"中国式农村现代化道路探索", a:"刘金海", m:"政策文本分析、发展观理论"},
+  {t:"农业社会化服务的发展逻辑、现实阻滞", a:"郭晓鸣", m:"纯理论分析、政策评价"},
+  {t:"技术革命、生产方式变革与企业组织结构调整", a:"戚聿东", m:"马克思主义政治经济学、经济史"},
+  {t:"农业如何借数智提新质从传统走向现代", a:"文雁兵", m:"纵向单案例研究、结构化编码"}
+ ]}
+];
+
+const summaryEl = document.getElementById('summary');
+const filtersEl = document.getElementById('filters');
+const groupsEl = document.getElementById('groups');
+const kwInput = document.getElementById('kwInput');
+const kwListEl = document.getElementById('kwList');
+const resultBar = document.getElementById('resultBar');
+const btnClear = document.getElementById('btnClear');
+const btnReset = document.getElementById('btnReset');
+
+let active = new Set(DATA.map(d=>d.key));
+
+// 关键词标签面板：改为按"模型大类"快速筛选，点击后只显示该大类的文献
+function renderKwList(){
+  kwListEl.innerHTML = '';
+  DATA.forEach(d=>{
+    const el = document.createElement('span');
+    el.className = 'kw' + (active.size === 1 && active.has(d.key) ? ' on' : '');
+    el.innerHTML = `${d.cat} <span style="opacity:.55">${d.papers.length}</span>`;
+    el.onclick = ()=>{
+      // 点击大类：若已单独选中则恢复全部，否则只保留该大类
+      if(active.size === 1 && active.has(d.key)){
+        active = new Set(DATA.map(x=>x.key));
+      } else {
+        active = new Set([d.key]);
+      }
+      kwInput.value = '';
+      render();
+    };
+    kwListEl.appendChild(el);
+  });
+}
+
+// 判断某篇文献是否命中检索（仅匹配标题 + 作者）
+function paperHit(p, kw){
+  const hay = (p.t + ' ' + p.a).toLowerCase();
+  return hay.includes(kw.toLowerCase());
+}
+
+function render(){
+  summaryEl.innerHTML = '';
+  filtersEl.innerHTML = '';
+  groupsEl.innerHTML = '';
+  renderKwList();
+
+  const kw = kwInput.value.trim().toLowerCase();
+  const hasSearch = kw.length > 0;
+
+  const total = DATA.reduce((s,d)=>s+d.papers.length,0);
+  summaryEl.innerHTML = `
+    <div class="metric"><div class="num">${DATA.length}</div><div class="lbl">模型大类</div></div>
+    <div class="metric"><div class="num">64</div><div class="lbl">文献总数</div></div>
+    <div class="metric"><div class="num">${total}</div><div class="lbl">归类条目(含重复归类)</div></div>
+  `;
+
+  // —— 按标题/作者检索文章模式 ——
+  if(hasSearch){
+    const matches = [];
+    const seen = new Set();
+    DATA.forEach(d=>{
+      d.papers.forEach(p=>{
+        const key = p.t + '|' + p.a;
+        if(seen.has(key)) return;
+        if(paperHit(p, kw)){
+          seen.add(key);
+          matches.push({cat:d.cat, p});
+        }
+      });
+    });
+    resultBar.innerHTML = `检索到 <b>${matches.length}</b> 篇文章`;
+    const wrap = document.createElement('div');
+    wrap.className = 'result-flat';
+    if(matches.length === 0){
+      wrap.innerHTML = '<div class="paper" style="border-left-color:#ccc;">没有找到匹配的文章，请检查标题或作者是否输入正确</div>';
+    } else {
+      wrap.innerHTML = matches.map(({cat,p})=>`
+        <div class="paper">
+          <div class="title">${p.t}</div>
+          <div class="meta"><b>${p.a}</b> · 计量模型：${p.m}<span class="cat-tag">【${cat}】</span></div>
+        </div>`).join('');
+    }
+    groupsEl.appendChild(wrap);
+    filtersEl.style.display = 'none';
+    return;
+  }
+
+  // —— 大类标签筛选模式 ——
+  filtersEl.style.display = 'flex';
+  resultBar.innerHTML = '';
+
+  DATA.forEach(d=>{
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (active.has(d.key)?' on':'');
+    chip.innerHTML = `${d.cat}<span class="cnt">${d.papers.length}</span>`;
+    chip.onclick = ()=>{
+      if(active.has(d.key)) active.delete(d.key); else active.add(d.key);
+      render();
+    };
+    filtersEl.appendChild(chip);
+  });
+
+  DATA.forEach(d=>{
+    const show = active.has(d.key);
+    const g = document.createElement('div');
+    g.className = 'group' + (show?'':' hidden');
+    const papers = d.papers.map(p=>`
+      <div class="paper">
+        <div class="title">${p.t}</div>
+        <div class="meta"><b>${p.a}</b> · ${p.m}</div>
+      </div>`).join('');
+    g.innerHTML = `
+      <div class="group-head">
+        <h2>${d.cat}</h2>
+        <span class="tag">${d.papers.length} 篇</span>
+        <span class="desc">${d.desc}</span>
+      </div>
+      <div class="papers">${papers}</div>`;
+    groupsEl.appendChild(g);
+  });
+}
+
+kwInput.addEventListener('input', render);
+btnClear.onclick = ()=>{ kwInput.value=''; render(); };
+btnReset.onclick = ()=>{ kwInput.value=''; active = new Set(DATA.map(d=>d.key)); render(); };
+render();
+</script>
+</body>
+</html>
