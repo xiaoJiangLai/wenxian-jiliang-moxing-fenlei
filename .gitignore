@@ -1,0 +1,9 @@
+# 依赖与临时文件
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+
+# Python 缓存
+__pycache__/
+*.pyc
