@@ -35,6 +35,9 @@ header p{color:var(--muted); font-size:14px; margin-top:6px;}
 .paper .meta{font-size:12px; color:var(--muted);}
 .paper .meta b{color:#555; font-weight:500;}
 .paper .badge{display:inline-block; font-size:11px; background:var(--accent-bg); color:var(--accent); border-radius:5px; padding:1px 7px; margin-right:4px; margin-bottom:2px;}
+.badge.lv-top{background:#FDF0E6; color:#B4450A; border:1px solid #F3C9A8;}
+.badge.lv-auth{background:#EAF4EC; color:#1E6B3B; border:1px solid #BCE0C6;}
+.badge.lv-core{background:#EEF1F5; color:#5A6B7E; border:1px solid #D3DBE4;}
 .hidden{display:none;}
 .footer{color:var(--muted); font-size:12px; text-align:center; margin-top:20px;}
 .search-box{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:20px;}
@@ -56,7 +59,7 @@ header p{color:var(--muted); font-size:14px; margin-top:6px;}
 <body>
 <header>
   <h1>文献计量模型分类索引</h1>
-  <p>共 64 篇经济学文献 · 按核心计量模型归类，点击模型标签即可筛选对应文献</p>
+  <p>共 64 篇经济学文献 · 按核心计量模型归类，并标注每篇的期刊级别</p>
 </header>
 <div class="wrap">
   <div class="summary" id="summary"></div>
@@ -74,7 +77,7 @@ header p{color:var(--muted); font-size:14px; margin-top:6px;}
 
   <div class="filters" id="filters"></div>
   <div id="groups"></div>
-  <div class="footer">分类依据每篇文献的核心实证方法（一篇文献可归入多个大类）· 上方输入框可按文章标题/作者检索，并显示其所用计量模型</div>
+  <div class="footer">分类依据每篇文献的核心实证方法（一篇文献可归入多个大类）· 上方输入框可按文章标题/作者检索 · 期刊级别：<b style="color:#B4450A">顶级A刊</b>（经济研究/管理世界等）· <b style="color:#1E6B3B">权威</b>（世界经济/中国农村经济等CSSCI权威）· <b style="color:#5A6B7E">CSSCI核心</b></div>
 </div>
 
 <script>
@@ -122,6 +125,7 @@ const DATA = [
   {t:"地方政府债务与非农就业提升", a:"毛捷", m:"双向固定效应、2SLS、面板Logit"},
   {t:"数字乡村对农业绿色全要素生产率的影响", a:"杜建军", m:"2SLS、中介效应、SBM-DEA"},
   {t:"社会网络、技能提升与就业地选择", a:"孙晓华", m:"IV/2SLS、Probit、CFA"},
+  {t:"农村集体经济发展、农户收入增长与差距缩小", a:"张浩", m:"工具变量、2SLS、双向固定效应、中介/调节效应"},
   {t:"高标准农田建设的农地流转市场转型效应", a:"王术坤", m:"IV/2SLS、Logit、村庄固定效应"}
  ]},
 {cat:"固定效应面板模型", key:"fe", desc:"面板数据的固定效应/双向固定效应，是实证研究的基础框架", color:"#534AB7",
@@ -132,6 +136,7 @@ const DATA = [
   {t:"产业规模偏好与企业全要素生产率", a:"王海成", m:"多维固定效应、ACF法、分时期DID"},
   {t:"数字经济发展、资本跨区域非对称流动", a:"孙伟增", m:"多维固定效应(城市对)、2SLS"},
   {t:"气候风险、经济增长与城市内涵式发展", a:"陈海山", m:"双向固定效应、事件研究、长差分"},
+  {t:"中国粮食安全保障的农地规模经营逻辑", a:"徐志刚", m:"面板固定效应、二次项非线性(倒U型)、工具变量"},
   {t:"重庆南川村域耕地撂荒成因及分异机制", a:"王刚", m:"多元线性回归、VIF、自然断点法"}
  ]},
 {cat:"空间计量", key:"spatial", desc:"空间自相关与空间溢出效应，含空间杜宾(SDM)、空间滞后、空间误差", color:"#7F77DD",
@@ -149,7 +154,7 @@ const DATA = [
   {t:"中国农业全要素生产率演进与要素错配", a:"吴亚玲", m:"TFP测度、Hsieh-Klenow错配、反事实"},
   {t:"传统宗族文化提升现代农业生产效率", a:"丁从明", m:"DEA-Malmquist、2SLS、交互项"},
   {t:"人与自然何以和谐共生", a:"邵帅", m:"混合网络DEA、固定效应、2SLS"},
-  {t:"人口老龄化下农业人力资本对农业绿色TFP", a:"杜建国", m:"超效率SBM、Malmquist、IV-2SLS"},
+  {t:"人口老龄化下农业人力资本对农业绿色TFP的影响", a:"杜建国", m:"超效率SBM、Malmquist、IV-2SLS"},
   {t:"数字经济赋能低碳发展", a:"韩晶", m:"super-SBM+GML、熵权法、DDF"},
   {t:"经济结构调整、绿色技术进步与低碳转型", a:"邵帅", m:"DDF-DEA、Luenberger、空间杜宾"},
   {t:"绿色金融改革创新试验区效果评估", a:"赵亚雄", m:"超效率DEA、Malmquist-Luenberger、DID"}
@@ -179,6 +184,98 @@ const DATA = [
   {t:"农业如何借数智提新质从传统走向现代", a:"文雁兵", m:"纵向单案例研究、结构化编码"}
  ]}
 ];
+
+// 期刊级别映射：按「作者」匹配，值 = [期刊名, 级别]
+const JOURNAL = [
+  // —— 顶级（A刊级） ——
+  ["王海成","《经济研究》","顶级A刊"],
+  ["陆旸","《经济研究》","顶级A刊"],
+  ["刘晨晖","《经济研究》","顶级A刊"],
+  ["吴敏","《经济研究》","顶级A刊"],
+  ["田文佳","《经济研究》","顶级A刊"],
+  ["方福前","《经济研究》","顶级A刊"],
+  ["焦豪","《经济研究》","顶级A刊"],
+  ["胡珺","《经济研究》","顶级A刊"],
+  ["孙晓华","《经济研究》","顶级A刊"],
+  ["王辉","《经济研究》","顶级A刊"],
+  ["张浩","《经济研究》","顶级A刊"],
+  ["严成樑","《经济研究》","顶级A刊"],
+  ["郭家堂","《经济研究》","顶级A刊"],
+  ["仇童伟","《管理世界》","顶级A刊"],
+  ["朱诗娥","《管理世界》","顶级A刊"],
+  ["徐志刚","《管理世界》","顶级A刊"],
+  ["邵帅","《管理世界》","顶级A刊"],
+  ["姚加权","《管理世界》","顶级A刊"],
+  ["文雁兵","《管理世界》","顶级A刊"],
+  ["毛日昇","《管理世界》","顶级A刊"],
+  ["戚聿东","《管理世界》","顶级A刊"],
+  ["龚斌磊","《管理世界》","顶级A刊"],
+  ["张锦华","《管理世界》","顶级A刊"],
+  ["李兆睿","《管理世界》","顶级A刊"],
+  ["陈晓佳","《管理世界》","顶级A刊"],
+  ["沈坤荣","《管理世界》","顶级A刊"],
+  // —— 权威 CSSCI ——
+  ["尹振东","《世界经济》","权威"],
+  ["王剑程","《世界经济》","权威"],
+  ["周广肃","《金融研究》","权威"],
+  ["孙伟增","《中国工业经济》","权威"],
+  ["龚锋","《财贸经济》","权威"],
+  ["毛捷","《财政研究》","权威"],
+  ["许庆","《统计研究》","权威"],
+  ["韩晶","《统计研究》","权威"],
+  ["陈海山","《统计研究》","权威"],
+  ["李慧","《统计研究》","权威"],
+  ["李芳华","《中国农村经济》","权威"],
+  ["刘金海","《中国农村经济》","权威"],
+  ["王定祥","《中国农村经济》","权威"],
+  ["丁从明","《中国农村经济》","权威"],
+  ["郭晓鸣","《中国农村经济》","权威"],
+  ["李宁","《中国农村经济》","权威"],
+  ["付阳奇","《中国农村经济》","权威"],
+  ["左喆瑜","《中国农村经济》","权威"],
+  ["王术坤","《中国农村经济》","权威"],
+  ["史丹","《改革》","权威"],
+  ["吴亚玲","《中国农村经济》","权威"],
+  // —— CSSCI 核心 ——
+  ["杜建国","《中国人口·资源与环境》","CSSCI核心"],
+  ["周沂","《中国人口·资源与环境》","CSSCI核心"],
+  ["杜建军","《中国人口·资源与环境》","CSSCI核心"],
+  ["王瑶","《中国人口·资源与环境》","CSSCI核心"],
+  ["张国胜","《中国人口科学》","CSSCI核心"],
+  ["杨瑞龙","《人口研究》","CSSCI核心"],
+  ["杨金玉","《南开经济研究》","CSSCI核心"],
+  ["赵广川","《南开经济研究》","CSSCI核心"],
+  ["赵亚雄","《经济评论》","CSSCI核心"],
+  ["杨一单","《地理学报》","CSSCI核心"],
+  ["王金伟","《地理学报》","CSSCI核心"],
+  ["王刚","《地理学报》","CSSCI核心"],
+  ["彭文斌","《地理学报》","CSSCI核心"]
+];
+
+// 孙伟增有多篇，需按标题细分精确匹配
+const JOURNAL_EXTRA = [
+  ["孙伟增","政务服务一体化","《管理世界》","顶级A刊"],
+  ["孙伟增","资本跨区域","《经济研究》","顶级A刊"],
+  ["孙伟增","政策赋能","《中国工业经济》","权威"],
+  ["孙伟增","住房保障","《金融研究》","权威"]
+];
+
+function getJournal(p){
+  for(const [a, key, jn, lv] of JOURNAL_EXTRA){
+    if(p.a === a && p.t.includes(key)) return {jn, lv};
+  }
+  for(const [a, jn, lv] of JOURNAL){
+    if(p.a === a) return {jn, lv};
+  }
+  return null;
+}
+
+// 级别 → 徽章样式类
+function lvClass(lv){
+  if(lv === '顶级A刊') return 'lv-top';
+  if(lv === '权威') return 'lv-auth';
+  return 'lv-core';
+}
 
 const summaryEl = document.getElementById('summary');
 const filtersEl = document.getElementById('filters');
@@ -228,10 +325,30 @@ function render(){
   const hasSearch = kw.length > 0;
 
   const total = DATA.reduce((s,d)=>s+d.papers.length,0);
+
+  // 统计期刊档次分布（去重，按作者+标题）
+  const lvCount = {top:0, auth:0, core:0, none:0};
+  const seenJ = new Set();
+  DATA.forEach(d=>{
+    d.papers.forEach(p=>{
+      const key = p.t + '|' + p.a;
+      if(seenJ.has(key)) return;
+      seenJ.add(key);
+      const j = getJournal(p);
+      if(!j) lvCount.none++;
+      else if(j.lv==='顶级A刊') lvCount.top++;
+      else if(j.lv==='权威') lvCount.auth++;
+      else lvCount.core++;
+    });
+  });
+
   summaryEl.innerHTML = `
     <div class="metric"><div class="num">${DATA.length}</div><div class="lbl">模型大类</div></div>
     <div class="metric"><div class="num">64</div><div class="lbl">文献总数</div></div>
     <div class="metric"><div class="num">${total}</div><div class="lbl">归类条目(含重复归类)</div></div>
+    <div class="metric"><div class="num" style="color:#B4450A">${lvCount.top}</div><div class="lbl">顶级A刊</div></div>
+    <div class="metric"><div class="num" style="color:#1E6B3B">${lvCount.auth}</div><div class="lbl">权威CSSCI</div></div>
+    <div class="metric"><div class="num" style="color:#5A6B7E">${lvCount.core}</div><div class="lbl">CSSCI核心</div></div>
   `;
 
   // —— 按标题/作者检索文章模式 ——
@@ -254,11 +371,15 @@ function render(){
     if(matches.length === 0){
       wrap.innerHTML = '<div class="paper" style="border-left-color:#ccc;">没有找到匹配的文章，请检查标题或作者是否输入正确</div>';
     } else {
-      wrap.innerHTML = matches.map(({cat,p})=>`
+      wrap.innerHTML = matches.map(({cat,p})=>{
+        const j = getJournal(p);
+        const jtag = j ? `<span class="badge ${lvClass(j.lv)}">${j.jn} · ${j.lv}</span>` : '';
+        return `
         <div class="paper">
-          <div class="title">${p.t}</div>
+          <div class="title">${p.t}${jtag}</div>
           <div class="meta"><b>${p.a}</b> · 计量模型：${p.m}<span class="cat-tag">【${cat}】</span></div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
     groupsEl.appendChild(wrap);
     filtersEl.style.display = 'none';
@@ -284,11 +405,15 @@ function render(){
     const show = active.has(d.key);
     const g = document.createElement('div');
     g.className = 'group' + (show?'':' hidden');
-    const papers = d.papers.map(p=>`
+    const papers = d.papers.map(p=>{
+      const j = getJournal(p);
+      const jtag = j ? `<span class="badge ${lvClass(j.lv)}">${j.jn} · ${j.lv}</span>` : '';
+      return `
       <div class="paper">
-        <div class="title">${p.t}</div>
+        <div class="title">${p.t}${jtag}</div>
         <div class="meta"><b>${p.a}</b> · ${p.m}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     g.innerHTML = `
       <div class="group-head">
         <h2>${d.cat}</h2>
